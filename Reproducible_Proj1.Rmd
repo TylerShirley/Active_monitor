@@ -1,0 +1,138 @@
+---
+title: "Reproducible_Proj1"
+author: "Tyler Shirley"
+date: "8/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read Dataset
+
+Read the original activity dataset and load all necessary packages to process the data.
+
+Original data is scrubbed of NA values. Then put date and time values into the dataframe.
+```{r}
+activity_unclean <- read.csv("activity.csv")
+
+#Load in packages
+library(ggplot2)
+library(lubridate)
+library(plyr)
+library(dplyr)
+
+#remove the NA values & make date data type
+activity_unclean$date <- as.Date(as.character(activity_unclean$date))
+activity <- na.omit(activity_unclean)
+activity$day <- weekdays(activity$date)
+
+step_day <- aggregate(steps ~ date, activity, FUN = sum)
+```
+
+## Histogram of Daily Steps
+
+Create a histogram by looking at the frequency of steps by date.
+```{r}
+hist(step_day$steps, 
+     xlab = "average steps",
+     main = "Histogram of Steps",
+     col = "red")
+```
+
+## Mean and Median of steps
+```{r}
+mean_median_steps <- summary(step_day$steps)
+mean_median_steps
+```
+
+## Time Series Number of Steps
+
+Group the steps by the intervals taken. Then use the ggplot functions to construct a graph of Average steps by Interval.
+
+```{r}
+step_int <- aggregate(steps ~ interval, activity, FUN = mean)
+tim_ser <- ggplot(step_int, aes(x = interval, y = steps)) + 
+  geom_line() + 
+  labs(title = "Average Steps Per Interval", x = "Interval", y = "Average Steps") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+tim_ser
+```
+
+## Max Step intervals
+
+find the interval with the maximum number of steps
+
+```{r}
+max_step <- max(step_int$steps)
+biggest_interval <- step_int[which.max(step_int$steps), 1]
+
+Step_max_tbl <- data.frame("Max Steps" = max_step,
+                           "Biggest interval" = biggest_interval)
+
+Step_max_tbl
+```
+
+##Number of NA in Active Dataset
+
+```{r}
+sum_active_na <- sum(is.na(activity_unclean))
+sum_active_na
+```
+
+## Replace NA with Averages from Intervals
+
+Create a logical vector of the NA values from active_na. Then create a vector of averages based on the intervals available.
+```{r}
+df_active_na <- activity_unclean
+active_na <- is.na(df_active_na$steps)
+averages <- tapply(df_active_na$steps, df_active_na$interval, mean, na.rm = TRUE)
+
+df_active_na <- df_active_na %>% 
+  mutate(steps = replace(steps, active_na, averages))
+  
+new_df_active <- tapply(df_active_na$steps, df_active_na$date,sum, na.rm = TRUE)
+hist(new_df_active,
+     main = "Histogram of New Averages",
+     xlab = "Steps By Date",
+     ylab = "Instances of Steps Per Day",
+     col = "blue")
+
+Mean_new = mean(new_df_active)
+Median_new = median(new_df_active)
+
+Replaced_Data <- data.frame("New Mean" = Mean_new,
+                            "New Median" = Median_new)
+Replaced_Data
+
+```
+
+## Weekends vs Weekday
+
+Find the breakdown of weekend steps vs weekday steps. First make new columns to show what is a weekday vs wat is a weekend. Then create new dataframes with only Weekend or Weekday data. That is then aggregated with the averages to show the means across the Weekday an Weekend Dataframe. 
+```{r}
+df_active_na$day <- weekdays(df_active_na$date)
+
+df_active_na$dow <- ifelse(df_active_na$day %in% c("Saturday", "Sunday"),
+                            "Weekend",
+                            "Weekday")
+
+Weekend_int <- subset(df_active_na, df_active_na$dow == "Weekend")
+Weekend_int <- aggregate(steps ~ interval, Weekend_int, FUN = mean)
+
+Weekday_int<- subset(df_active_na, df_active_na$dow == "Weekday")
+Weekday_int <- aggregate(steps ~ interval, Weekday_int, FUN = mean)
+
+par(mfrow = c(2,1))
+  plot(Weekday_int$interval, Weekday_int$steps, "l",
+       main = "Weekday Steps",
+       xlab = "Weekday Interval",
+       ylab = "Weekday Steps")
+  plot(Weekend_int$interval, Weekend_int$steps, "l",
+       main = "Weekend Steps",
+       xlab = "Weekend Interval",
+       ylab = "Weekend Steps")
+
+```
