@@ -2,7 +2,10 @@
 title: "Reproducible_Proj1"
 author: "Tyler Shirley"
 date: "8/4/2020"
-output: html_document
+output:
+  html_document: 
+    keep_md: yes
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
